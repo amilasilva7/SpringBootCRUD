@@ -1,21 +1,21 @@
-package com.example.demo.dtos;
+package com.example.demo.dtos.city;
 
+import com.example.demo.dtos.country.CountryDTO;
 import com.example.demo.models.City;
 
 public class CityDTO {
     private String city;
-    private Long population;
+    private int population;
     private boolean isCapital;
-    private String country;
-    private String headOfState;
+    private CountryDTO country;
 
     public CityDTO(City city) {
         this.city = city.getCity();
-        this.population = Long.valueOf(city.getPopulation());
+        this.population = city.getPopulation();
         this.isCapital = city.getIsCapital();
-        this.country = city.getCountry().getCountry();
-        this.headOfState = city.getCountry().getHeadOfState();
+        this.country = city.getCountry() != null ? new CountryDTO(city.getCountry()) : null;
     }
+
 
     public String getCity() {
         return city;
@@ -25,11 +25,11 @@ public class CityDTO {
         this.city = city;
     }
 
-    public Long getPopulation() {
+    public int getPopulation() {
         return population;
     }
 
-    public void setPopulation(Long population) {
+    public void setPopulation(int population) {
         this.population = population;
     }
 
@@ -41,19 +41,11 @@ public class CityDTO {
         isCapital = capital;
     }
 
-    public String getCountry() {
+    public CountryDTO getCountry() {
         return country;
     }
 
-    public void setCountry(String country) {
+    public void setCountry(CountryDTO country) {
         this.country = country;
-    }
-
-    public String getHeadOfState() {
-        return headOfState;
-    }
-
-    public void setHeadOfState(String headOfState) {
-        this.headOfState = headOfState;
     }
 }

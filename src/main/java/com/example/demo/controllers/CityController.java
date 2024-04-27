@@ -1,74 +1,81 @@
 package com.example.demo.controllers;
 
-import com.example.demo.dtos.*;
+import com.example.demo.CustomExceptions.CityAlreadyExistsException;
+import com.example.demo.CustomExceptions.CityNotFoundException;
+import com.example.demo.CustomExceptions.CountryNotFoundException;
+import com.example.demo.dtos.city.CityDTO;
+import com.example.demo.dtos.city.CityRequestDTO;
+import com.example.demo.dtos.city.CityUpdateRequestDTO;
 import com.example.demo.models.City;
-import com.example.demo.repository.CityRepository;
+import com.example.demo.repository.CountryRepository;
+import com.example.demo.service.CityService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/city")
 public class CityController {
 
     @Autowired
-    private CityRepository cityRepository;
+    CityService cityService;
+
+    @Autowired
+    private CountryRepository countryRepository;
 
     @GetMapping
     public List<CityDTO> getAllCities() {
-        List<City> cities = cityRepository.findAll();
-        return cities.stream().map(CityDTO::new).toList();
+        return cityService.getAllCities();
     }
 
     @PostMapping
-    public ResponseEntity<CityDTO> createCity(@RequestBody City city) throws CityAlreadyExistsException {
-        if (city.getId() != null || city.getCountry() != null) {
-            throw new CityAlreadyExistsException("Invalid city object for creation");
-        }
-        if (cityRepository.existsByCity(city.getCity())) {
-            throw new CityAlreadyExistsException("City " + city.getCity() + " already exists");
-        }
-        City savedCity = cityRepository.save(city);
-        return ResponseEntity.ok(new CityDTO(savedCity));
+    public ResponseEntity<CityRequestDTO> createCity(@Valid @RequestBody CityRequestDTO cityRequestDTO) throws CityAlreadyExistsException {
+        City savedCity = cityService.createCity(cityRequestDTO);
+        return ResponseEntity.ok(new CityRequestDTO(savedCity));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<CityDTO> updateCity(@PathVariable Long id, @RequestBody City city) throws CityNotFoundException, CityAlreadyExistsException {
-        if (city.getId() != null || (city.getCountry() != null && city.getCountry().getId() == null)) {
-            throw new CityAlreadyExistsException("Invalid city object for update");
-        }
-        City existingCity = cityRepository.findById(id).orElseThrow(() -> new CityNotFoundException("City with id " + id + " not found"));
-        existingCity.setCity(city.getCity());
-        existingCity.setIsCapital(city.getIsCapital());
-        existingCity.setPopulation(city.getPopulation());
-        City savedCity = cityRepository.save(existingCity);
+    public ResponseEntity<CityDTO> updateCity(@PathVariable Long id, @Valid @RequestBody CityUpdateRequestDTO cityUpdateRequestDTO) throws CityNotFoundException, CityAlreadyExistsException, CountryNotFoundException {
+        City savedCity = cityService.updateCity(cityUpdateRequestDTO, id);
         return ResponseEntity.ok(new CityDTO(savedCity));
     }
 
     @GetMapping("/searchPop")
     public List<CityDTO> getCitiesByPopulation(@RequestParam Long population) {
-        List<City> cities = cityRepository.findByPopulationGreaterThan(population);
-        return cities.stream().map(CityDTO::new).toList();
+        return cityService.getCitiesByPopulation(population);
     }
 
     @GetMapping("/searchCity")
     public List<CityDTO> getCitiesByCity(@RequestParam String city) {
-        List<City> cities = cityRepository.findByCityContaining(city);
-        return cities.stream().map(CityDTO::new).toList();
+        return cityService.searchCityByCityName(city);
     }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public Map<String, String> handleValidationExceptions(MethodArgumentNotValidException exception) {
+        Map<String, String> errors = new HashMap<>();
+
+        exception.getBindingResult().getAllErrors().forEach((error) -> {
+            String fieldName = ((FieldError) error).getField();
+            String errorMessage = error.getDefaultMessage();
+            errors.put(fieldName, errorMessage);
+        });
+        return errors;
+    }
+
 }
 
-class CityAlreadyExistsException extends Exception {
-    public CityAlreadyExistsException(String message) {
-        super(message);
-    }
-}
 
-class CityNotFoundException extends Exception {
-    public CityNotFoundException(String message) {
-        super(message);
-    }
-}
+
+
+
+
 
